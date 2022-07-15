@@ -11,11 +11,9 @@ PARAKEET AGENT
 
 kernel = functools.partial(params.kernel, fit = params.fit)
 
-class Parakeet():
+class Mosquito():
 	
-	def __init__(self, age, pos = None, coords = (0, 0), dispersal = 'jump'):
-
-		self.age = age
+	def __init__(self, pos = None, coords = (0, 0)):
 		
 		if pos is None:
 			# Position, state and rates initialization
@@ -28,57 +26,14 @@ class Parakeet():
 
 		self.pos = (x, y)
 		self.coords = coords
-		self.probabilities = {'px': params.df['px'][self.age],
-					'mx': params.df['mx'][self.age]}
-  
-		# Dispersal movement
-		self.move = self.choose_dispersal_strategy(dispersal)
-		self.has_nested = False
+		self.r_i = []
+		# possible states: host-seeking, biting, digesting
+		self.state = 'host-seeking'  
+		self.infectious = False # carries disease ?
 
 
-	# Pick the appropriate dispersal strategy for parakeets
-	def choose_dispersal_strategy(cls, dispersal):
-
-		if dispersal == 'jump':
-			return cls.dispersal_jump
-
-		elif dispersal == 'moore':
-			return cls.dispersal_moore
-
-		elif dispersal == 'neumann':
-			return cls.dispersal_neumann
-
-	def update_probabilities(self):
-		k = list(self.probabilities.keys())
-		for p in k:
-			self.probabilities[p] = params.df[p][self.age]
-
-
-	''' MOVEMENT FUNCTIONS '''
-	# Border effect (repulsion)
-	def dispersal_jump(self, grid):
-		prev_pos = self.pos
-
-		# dispersion parameters 
-		alpha = 2 * math.pi * random.random() # angle
-		d = kernel() # distance
-		r = d / grid.scale # distance in meters to pixels in grid
-
-		# new position
-		x, y = r * math.cos(alpha) + self.pos[0], r * math.sin(alpha) + self.pos[1]
-		self.coords = x, y
-		xy = np.array([(x, y)])
-
-		# compute Euclidean distances
-		closest_cell = np.linalg.norm(np.array(grid.coords) - xy, axis=1)
-		minxy = np.where(closest_cell == min(closest_cell))[0]
-		self.pos = grid.coords[int(minxy)]
-
-		# update move in the grid
-		grid.grid[prev_pos] -= 1
-		grid.grid[self.pos] += 1
-  
-		# return (d, alpha)
+	def move(self, grid):
+		pass
 	
 	def dispersal_moore(self, grid):
 		pass
@@ -86,8 +41,21 @@ class Parakeet():
 	def dispersal_neumann(self, grid):
 		pass
 	
+
+	''' RATES '''
+	# Contact rate (Cvh): total number of contact events between mosquito-human per time unit in a given area
+	# Bloodfeeding rate (Bvh): average number of blood meals a single mosquito attains from hosts per time unit in a given area
+	# Biting rate: average number of bites a single mosquito takes from hosts per time unit in a given area
+	## Human focused -> # Bite exposure rate (Evh): number of bites (with or without blood-feeding) a single host experiences per time unit in a given area
+	"""Notes: Bloodfeeding, biting rate, and bite exposure are per capita. Contact rate is not."""
  
 	''' POSSIBLE ACTIONS '''
+	# host preference ?? some studies show vector preference towards infected individuals
+	# gonotrophic cycle duration ???
+	# biting (gets a percentatge of satiation) # bloodfeeding ?? two separate parameters???
+	# host-seeking (moves until it finds a human to bite)
+	# digesting (digests blood)
+	# laying (lays eggs, how many ???)
 	def die(self, grid):
 		grid.grid[self.pos] -= 1
 
