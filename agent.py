@@ -5,11 +5,14 @@ from copy import deepcopy
 import params
 import functools
 
-'''
-PARAKEET AGENT 
-'''
+''' PREVIOUS CONSIDERATIONS '''
+# Contact rate and other factors depend on host and vector density. 
+# We eliminate that with a constant N for both vector and host.
+# Implement biting preference towards some hosts ? (infected, low protective)
 
-kernel = functools.partial(params.kernel, fit = params.fit)
+'''
+VECTOR AGENT 
+'''
 
 class Mosquito():
 	
@@ -27,10 +30,10 @@ class Mosquito():
 		self.pos = (x, y)
 		self.coords = coords
 		self.r_i = []
-		# possible states: host-seeking, biting, digesting
+		# possible states: host-seeking, probing, blood-feeding, digesting
 		self.state = 'host-seeking'  
 		self.infectious = False # carries disease ?
-
+		self.satiation = 0
 
 	def move(self, grid):
 		pass
@@ -56,50 +59,41 @@ class Mosquito():
 	# host-seeking (moves until it finds a human to bite)
 	# digesting (digests blood)
 	# laying (lays eggs, how many ???)
-	def die(self, grid):
-		grid.grid[self.pos] -= 1
 
-	def mate(self, grid):
-		# Note that there is a probability of non-mating at all
-		n = np.random.choice(params.lays_p['Values'], p = params.lays_p['Probabilities'])
-		grid.grid[self.pos] += n
-		# number of births should be divided by 2 (number of reproductive units i.e. females)
-		return n
+	def feed(self):
+		self.satiation += random.random()
+		if self.satiation > 1:
+			self.satiated = True
 
-	def grow(self):
-		self.age += 1
+		self.state = ''
 
 	''' ACTION CHOICE '''
 	def action(self, grid):
+		pass
 
-		# returns boolean (is the agent still alive?) and integer (newborn parakeets)
 
-		if random.random() >= self.probabilities['px']:
-			self.die(grid)
-			return False, 0
-			# return False, 0, 0, 0
-
-		if self.age < params.adulthood:
-			newborns = 0
-			# d = 0
-			# alpha = 0
+'''
+HOST AGENT 
+'''
+class Human():
+	def __init__(self, pos = None, coords = (0, 0)):
 		
-		elif self.age <= params.max_dispersal_age:
-			if not self.has_nested:
-				dispersal = np.random.choice([False, True], p = params.dispersal_prob)
-				if dispersal:
-					# d, alpha = self.move(grid)
-					self.move(grid)
-					self.has_nested = True
-
-			newborns = self.mate(grid)
-
+		if pos is None:
+			# Position, state and rates initialization
+			if params.start_node == 'center':
+				x, y = int(params.width / 2), int(params.height / 2)
+			else:
+				x, y  = random.randrange(params.width), random.randrange(params.height)
 		else:
-			newborns = self.mate(grid)
-			# d = 0
-			# alpha = 0
+			x, y = pos
 
-		self.grow()
-		self.update_probabilities()
-
-		return True, newborns#, d, alpha
+		self.pos = (x, y)
+		self.coords = coords
+		self.r_i = []
+		# possible states: active, inactive
+		self.state = 'active'  
+		self.infectious = False # carries disease ?
+		self.atraction = 0 # preference 
+  
+	def action(self, grid):
+		pass
