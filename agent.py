@@ -1,9 +1,7 @@
 import random
-import math
 import numpy as np
-from copy import deepcopy
 import params
-import functools
+
 
 ''' PREVIOUS CONSIDERATIONS '''
 # Contact rate and other factors depend on host and vector density. 
@@ -15,7 +13,7 @@ VECTOR AGENT
 '''
 class Mosquito():
 	
-	def __init__(self, pos = None, coords = (0, 0)):
+	def __init__(self, id, pos = None, coords = (0, 0)):
 		
 		if pos is None:
 			# Position, state and rates initialization
@@ -25,26 +23,25 @@ class Mosquito():
 				x, y  = random.randrange(params.width), random.randrange(params.height)
 		else:
 			x, y = pos
+   
+		self.id = id
 
 		self.pos = (x, y)
 		self.coords = coords
-		self.r_i = []
-		# possible states: host-seeking, probing, blood-feeding, digesting
-		# possible states: host-seeking, handling, contact <---
+		self.r_i = [params.h_move]
+		self.r_label = ['h_move']
+  
+		# possible states: host-seeking, handling, contact (probing + blood-feeding) <---
 		self.state = 'host-seeking'  
 		self.infectious = False # carries disease ?
 		self.satiation = 0
+		self.n_bites = 0
+		self.n_cicles = 0
 
 		# Moore neighborhood
-		# self.dispersal_moore()
+		# self.available_moves = [(1, 0), (-1, 0), (0, 1), (0, -1)]
 
 		# Neumann neighborhood
-		self.dispersal_neumann()
-
-	def dispersal_moore(self):
-		self.available_moves = [(1, 0), (-1, 0), (0, 1), (0, -1)]
-
-	def dispersal_neumann(self, grid):
 		self.available_moves = [(1, 0), (-1, 0), (0, 1), (0, -1),
 		(-1, -1), (-1, 1), (1, 1), (1, -1)]
 
@@ -91,44 +88,56 @@ class Mosquito():
 
 		return host
 
+	def host_seek(self):
+     
+		self.state = 'host-seeking'
+		self.r_i = [params.v_move]
+		self.r_label = ['v_move']
+
 	def feed(self, host):
 		self.satiation += random.random()
 
 		if self.satiation > 1:
 			self.state = 'handling'
-			self.r_i = params.v_gonotrophic
+			self.r_i = [params.v_gonotrophic]
+			self.r_label = ['v_gonotrophic']
 
 		if host.infectous:
 			if random.random() < params.prob_infection:
 				self.infectious = True
+    
+		self.n_bites += 1
 
 	def bite(self, host):
 
 		if self.infectious:
 			if random.random() < params.prob_infection:
 				host.infectious = True
+    
+		self.n_bites += 1
 
 	def handling(self, grid):
 		self.satiation = 0
+		self.n_cicles += 1
 
 		if grid.host_presence(self.pos):
 			self.state = 'contact'
-			self.r_i = params.v_bite + params.v_feed
+			self.r_i = [params.v_bite] + [params.v_feed]
+			self.r_label = ['v_bite'] + ['v_feed']
 		
 		else:
-			self.state = 'host-seeking'
-			self.r_i = params.v_move
-
+			self.host_seek()
 
 	''' ACTION CHOICE '''
-	def action(self, grid):
+	def action(self, grid, choice):
 		
 		if self.state == 'host-seeking':
 
 			if grid.host_presence(self.pos):
 
 					self.state = 'contact'
-					self.r_i = params.v_bite + params.v_feed
+					self.r_i = [params.v_bite] + [params.v_feed]
+					self.r_label = ['v_bite'] + ['v_feed']
 
 			else:
 
@@ -146,8 +155,14 @@ class Mosquito():
 				h = self.choose_host(hosts)
 
 				''' DEFINE PROBABILITY OR SEPARATE RATE '''
-				self.bite(h)
-				self.feed(h)
+				if 'bite' in choice:
+					self.bite(h)
+     
+				elif 'feed' in choice:
+					self.feed(h)
+
+			else:
+				self.host_seek()
 
 
 
@@ -155,7 +170,7 @@ class Mosquito():
 HOST AGENT 
 '''
 class Human():
-	def __init__(self, pos = None, coords = (0, 0)):
+	def __init__(self, id, pos = None, coords = (0, 0)):
 		
 		if pos is None:
 			# Position, state and rates initialization
@@ -165,14 +180,38 @@ class Human():
 				x, y  = random.randrange(params.width), random.randrange(params.height)
 		else:
 			x, y = pos
+   
+		self.id = id
 
 		self.pos = (x, y)
 		self.coords = coords
-		self.r_i = []
+  
+		self.r_i = [params.h_move]
+		self.r_label = ['h_move']
+  
 		# possible states: active, inactive
-		self.state = 'active'  
+		# self.state = 'active'  
 		self.infectious = False # carries disease ?
 		self.atraction = 0 # preference 
   
+		# Moore neighborhood
+		# self.available_moves = [(1, 0), (-1, 0), (0, 1), (0, -1)]
+
+		# Neumann neighborhood
+		self.available_moves = [(1, 0), (-1, 0), (0, 1), (0, -1),
+		(-1, -1), (-1, 1), (1, 1), (1, -1)]
+
+	# move avoiding collision
+	def move(self, grid):
+		c = np.array(random.choice(self.available_moves))
+		pos = np.array(self.pos) + c
+		idx = np.where(pos < 0)[0]
+		pos[idx] = grid.limits[idx]
+		idx = np.where(pos > grid.limits)[0]
+		pos[idx] = 0
+		self.pos = pos
+  
 	def action(self, grid):
-		pass
+		
+		# implement change in host preference, probably as a function of infection
+		self.move(grid)
