@@ -13,13 +13,13 @@ time_unit = 'hours'
 prob_infection = 1
 
 """ VECTOR RATES """
-v_move = 0.25 # host-seeking
-v_bite = 1 # biting rate (per capita)
-v_feed = 0.5 # blood-feeding
-v_gonotrophic = 1/72 # gonotrophic cycle once every 72 hours == handling time
+v_move = 1 # host-seeking
+v_bite = 20 # biting rate (per capita)
+v_feed = 15 # blood-feeding
+v_gonotrophic = 1/24 # gonotrophic cycle once every 24 hours
 
 """ HOST RATES """
-h_move = 0.1
+h_move = 1/12
 
 # two options: center, random
 start_node = 'random' # 'center' 

@@ -7,7 +7,7 @@ class Lattice:
         self.w = width
         self.h = height
 
-        self.limits = np.array([width, height])
+        self.limits = np.array([width-1, height-1])
 
         # Create squared lattice
         self.grid = np.empty((width, height), dtype = object)
@@ -21,7 +21,7 @@ class Lattice:
 
     def host_presence(self, pos):
         inds = ["Human" in str(x.__class__) for x in self.grid[pos]]
-        bool(np.sum(inds))
+        return bool(np.sum(inds))
 
     def available_hosts(self, pos):
-        [x for x in self.grid[pos] if "Human" in str(x.__class__)]
+        return [x for x in self.grid[pos] if "Human" in str(x.__class__)]

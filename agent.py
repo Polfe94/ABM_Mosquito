@@ -11,7 +11,7 @@ import params
 '''
 VECTOR AGENT 
 '''
-class Mosquito():
+class Mosquito:
 	
 	def __init__(self, id, pos = None, coords = (0, 0)):
 		
@@ -28,15 +28,15 @@ class Mosquito():
 
 		self.pos = (x, y)
 		self.coords = coords
-		self.r_i = [params.h_move]
-		self.r_label = ['h_move']
+		self.r_i = [params.v_move]
+		self.r_label = ['v_move']
   
 		# possible states: host-seeking, handling, contact (probing + blood-feeding) <---
 		self.state = 'host-seeking'  
 		self.infectious = False # carries disease ?
 		self.satiation = 0
 		self.n_bites = 0
-		self.n_cicles = 0
+		self.n_cycles = 0
 
 		# Moore neighborhood
 		# self.available_moves = [(1, 0), (-1, 0), (0, 1), (0, -1)]
@@ -53,7 +53,13 @@ class Mosquito():
 		pos[idx] = grid.limits[idx]
 		idx = np.where(pos > grid.limits)[0]
 		pos[idx] = 0
-		self.pos = pos
+
+		[grid.grid[self.pos].remove(i) for i in grid.grid[self.pos] if i.id == self.id] 
+		self.pos = tuple(pos)
+		if grid.grid[self.pos] is None:
+			grid.grid[self.pos] = [self]
+		else:
+			grid.grid[self.pos].append(self)
 
 	# move with bouncing around edges
 	# def move(self, grid):
@@ -64,6 +70,10 @@ class Mosquito():
 	# 		pos = np.array(self.pos) + c
 	# 		if np.sum(np.logical_or(pos < 0, pos > grid.limits)) == 0:
 	# 			available = True
+ 
+	# 	[grid[self.pos].remove(i) for i in grid[self.pos] if i.id == self.id] 
+	# 	self.pos = pos
+	# 	grid[self.pos].append(self)
 
 	# 	self.pos = tuple(pos)
 	
@@ -83,7 +93,8 @@ class Mosquito():
 	# laying (lays eggs, how many ???)
 
 	def choose_host(self, hosts):
-		p = np.array([h.atraction for h in hosts]) / len(hosts) # bite preference
+		x = np.array([h.atraction for h in hosts])
+		p = x / np.sum(x) # bite preference
 		host = np.random.choice(hosts, p = p)
 
 		return host
@@ -95,14 +106,15 @@ class Mosquito():
 		self.r_label = ['v_move']
 
 	def feed(self, host):
-		self.satiation += random.random()
+		# self.satiation += random.random()
+		self.satiation += 0.3
 
 		if self.satiation > 1:
 			self.state = 'handling'
 			self.r_i = [params.v_gonotrophic]
 			self.r_label = ['v_gonotrophic']
 
-		if host.infectous:
+		if host.infectious:
 			if random.random() < params.prob_infection:
 				self.infectious = True
     
@@ -118,7 +130,7 @@ class Mosquito():
 
 	def handling(self, grid):
 		self.satiation = 0
-		self.n_cicles += 1
+		self.n_cycles += 1
 
 		if grid.host_presence(self.pos):
 			self.state = 'contact'
@@ -154,7 +166,6 @@ class Mosquito():
 				hosts = grid.available_hosts(self.pos)
 				h = self.choose_host(hosts)
 
-				''' DEFINE PROBABILITY OR SEPARATE RATE '''
 				if 'bite' in choice:
 					self.bite(h)
      
@@ -169,7 +180,7 @@ class Mosquito():
 '''
 HOST AGENT 
 '''
-class Human():
+class Human:
 	def __init__(self, id, pos = None, coords = (0, 0)):
 		
 		if pos is None:
@@ -192,7 +203,7 @@ class Human():
 		# possible states: active, inactive
 		# self.state = 'active'  
 		self.infectious = False # carries disease ?
-		self.atraction = 0 # preference 
+		self.atraction = 1 # preference; value must be greater than 0
   
 		# Moore neighborhood
 		# self.available_moves = [(1, 0), (-1, 0), (0, 1), (0, -1)]
@@ -209,9 +220,15 @@ class Human():
 		pos[idx] = grid.limits[idx]
 		idx = np.where(pos > grid.limits)[0]
 		pos[idx] = 0
-		self.pos = pos
+
+		[grid.grid[self.pos].remove(i) for i in grid.grid[self.pos] if i.id == self.id] 
+		self.pos = tuple(pos)
+		if grid.grid[self.pos] is None:
+			grid.grid[self.pos] = [self]
+		else:
+			grid.grid[self.pos].append(self)
   
-	def action(self, grid):
+	def action(self, grid, choice):
 		
 		# implement change in host preference, probably as a function of infection
 		self.move(grid)
